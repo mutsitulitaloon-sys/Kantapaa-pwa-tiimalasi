@@ -1,0 +1,298 @@
+
+<html lang="fi">
+<head>
+  <meta charset="UTF-8" />
+  <title>Kantapään silmukkalaskuri – PWA (All-in-One)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#3b82f6" />
+  <meta name="description" content="Monipari kantapään silmukkalaskuri (PWA, offline, asennettava)" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icon-192.png" sizes="192x192" />
+  <link rel="apple-touch-icon" href="icon-512.png" />
+  <style>
+    :root{--bg:#f7f8fb;--card:#ffffff;--text:#1f2937;--muted:#6b7280;--border:#e5e7eb;--accent:#3b82f6;--ok:#16a34a;--err:#ef4444;--warn:#f59e0b;--input:#f1f5f9;--shadow:0 2px 8px rgba(0,0,0,.06);--mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+    *{box-sizing:border-box}html,body{height:100%}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+    header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;background:#fff;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10}
+    header h1{font-size:1rem;margin:0}.actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    button{appearance:none;border:none;border-radius:8px;cursor:pointer;padding:9px 12px;font-weight:600;color:#fff;background:var(--accent)}
+    button.secondary{background:#64748b}button.danger{background:#ef4444}button.ghost{background:#334155}button:disabled{opacity:.6;cursor:not-allowed}
+    .pwa-banner{display:none;background:#e0f2fe;color:#075985;padding:8px 12px}.pwa-banner.show{display:flex;justify-content:space-between;align-items:center;gap:8px}
+    .pwa-banner button{background:#0ea5e9;color:#fff;border:0;border-radius:8px;padding:6px 10px;font-weight:700;cursor:pointer}
+    .layout{display:grid;grid-template-columns:300px 1fr;gap:14px;padding:14px}
+    aside{background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);padding:12px;display:flex;flex-direction:column;gap:10px;min-height:calc(100vh - 100px)}
+    input[type="text"],input[type="number"],select{width:100%;padding:8px 10px;border:2px solid var(--border);border-radius:8px;background:var(--input);font-size:1rem;outline:none;transition:border-color .15s ease,background .15s ease}
+    input.valid,select.valid{border-color:#86efac;background:#f0fdf4}input.invalid,select.invalid{border-color:#fecaca;background:#fff1f2}input.warn,select.warn{border-color:#fde68a;background:#fffbeb}
+    .pair-list{display:flex;flex-direction:column;gap:8px;overflow:auto}.pair-item{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:8px;border:1px solid var(--border);border-radius:10px;background:#fff;cursor:pointer}
+    .pair-item.active{outline:2px solid var(--accent)}.pair-name{font-weight:700;font-size:.95rem}.badge{font-size:.75rem;padding:3px 8px;border-radius:999px;color:#fff;white-space:nowrap}
+    .ok{background:var(--ok)}.err{background:var(--err)}.warn{background:var(--warn)}.card{background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);padding:14px}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.row{display:flex;gap:8px;align-items:center}
+    label{display:block;font-size:.85rem;margin-bottom:6px;color:#334155}.result{font-family:var(--mono);padding:8px 10px;background:#0b1220;color:#9aff9a;border-radius:8px;font-size:1rem;overflow:auto}
+    .muted{color:var(--muted);font-size:.9rem}.split{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .steps{font-family:var(--mono);font-size:.95rem;background:#0b1220;color:#e5ffe5;border-radius:8px;padding:10px;max-height:280px;overflow:auto;white-space:pre-wrap}
+    table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden}th,td{padding:8px 10px;border-bottom:1px solid var(--border);text-align:left;font-size:.95rem}
+    th{background:#f8fafc;font-weight:700}.toolbar{display:flex;gap:8px;flex-wrap:wrap}.notice{padding:8px 10px;border-radius:8px;background:#fffbeb;border:1px solid #fde68a;color:#92400e;font-size:.9rem}
+    .footer-tip{font-size:.85rem;color:#64748b;text-align:center;padding:12px}
+    @media (max-width:980px){.layout{grid-template-columns:1fr}.grid{grid-template-columns:1fr 1fr}.grid-2{grid-template-columns:1fr}.split{grid-template-columns:1fr}}
+    @media (max-width:640px){.grid{grid-template-columns:1fr}}
+    @media print{header,aside,#importFile,.pwa-banner{display:none!important}body{background:#fff}.layout{display:block;padding:0}.card{box-shadow:none;border:none;padding:0}.print-section{page-break-after:always;margin-bottom:16px}.steps{max-height:none}.result{background:#111;color:#0f0}}
+  </style>
+</head>
+<body>
+  <div id="pwaBanner" class="pwa-banner" role="region" aria-label="Asennusvihje">
+    <span>Asenna sovellus laitteellesi (offline, koko näyttö).</span>
+    <span style="display:flex; gap:6px;">
+      <button id="pwaInstallBtn">Asenna</button>
+      <button id="pwaDismissBtn" style="background:#64748b;">Sulje</button>
+    </span>
+  </div>
+
+  <header>
+    <h1>Kantapään silmukkalaskuri – Monipari PWA</h1>
+    <div class="actions">
+      <button id="addPairBtn" title="Lisää uusi pari">+ Uusi pari</button>
+      <button id="exportBtn" class="secondary" title="Vie parit JSONina">Vie JSON</button>
+      <button id="importBtn" class="secondary" title="Tuo parit JSON">Tuo JSON</button>
+      <button id="printBtn" class="ghost" title="Tulosta/PDF">Tulosta / PDF</button>
+      <button id="clearAllBtn" class="danger" title="Tyhjennä kaikki">Tyhjennä kaikki</button>
+      <input id="importFile" type="file" accept="application/json" style="display:none" />
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside aria-label="Parilista">
+      <input id="search" type="text" placeholder="Haku nimellä…" aria-label="Haku" />
+      <div id="pairList" class="pair-list" aria-live="polite"></div>
+      <p class="muted">Vinkki: Kaikki tallentuu paikallisesti (localStorage). Enintään 10 paria.</p>
+    </aside>
+
+    <main>
+      <section class="card print-section" aria-label="Aktiivisen parin muokkaus">
+        <div class="row" style="justify-content:space-between; gap:12px;">
+          <div style="flex:1;">
+            <label for="pairName">Parin nimi</label>
+            <input id="pairName" type="text" placeholder="Esim. Pari 1 – N48" />
+          </div>
+          <div class="toolbar">
+            <button id="duplicateBtn" class="secondary">Monista</button>
+            <button id="deleteBtn" class="danger">Poista</button>
+          </div>
+        </div>
+        <div style="height:8px;"></div>
+        <div class="grid">
+          <div><label for="N">Kokonaismäärä N</label><input id="N" type="number" min="0" step="1" /></div>
+          <div><label for="Lk">Vasen kaksoissilmukka (Lk)</label><input id="Lk" type="number" min="0" step="1" /></div>
+          <div><label for="Rk">Oikea kaksoissilmukka (Rk)</label><input id="Rk" type="number" min="0" step="1" /></div>
+          <div><label for="Lt">Vasen tavallinen (Lt)</label><input id="Lt" type="number" min="0" step="1" /></div>
+          <div><label for="T">Keskiosa T (tavalliset)</label><input id="T" type="number" min="0" step="1" /></div>
+          <div><label for="Rt">Oikea tavallinen (Rt)</label><input id="Rt" type="number" min="0" step="1" /></div>
+        </div>
+        <div style="height:10px;"></div>
+        <div class="split">
+          <div>
+            <div class="row" style="gap:10px;">
+              <div style="flex:1;"><strong>Laskettu yhteensä</strong><div id="computedN" class="result">-</div></div>
+              <div style="flex:1;"><strong>Tarkistus</strong><div id="status" class="result">-</div></div>
+            </div>
+            <p class="muted">Kaava: N = 2*Lk + 2*Rk + T + Lt + Rt</p>
+            <div id="notices"></div>
+          </div>
+          <div>
+            <strong>Rakenteen ehdotus</strong>
+            <div id="structure" class="result">-</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card print-section" aria-label="Tiheys ja koko">
+        <h2 style="margin:0 0 6px; font-size:1rem;">Langan paksuus, tiheysmuunnin ja puikkovinkit</h2>
+        <p class="muted">Sukkakäyttö-kytkin kiristää suositusta. Laske ehdotettu N jalan ympäryksen perusteella ja sovella pariin.</p>
+
+        <div class="grid-2">
+          <div><label for="yarnWeight">Langan paksuus (yarn weight)</label>
+            <select id="yarnWeight">
+              <option value="">— Valitse tai jätä tyhjäksi —</option>
+              <option value="lace">Lace</option><option value="fingering">Fingering</option><option value="sport">Sport</option>
+              <option value="dk">DK</option><option value="worsted">Worsted</option><option value="aran">Aran</option><option value="bulky">Bulky</option>
+            </select>
+          </div>
+          <div><label for="needleHint">Puikkovinkki (alue)</label><input id="needleHint" type="text" placeholder="—" readonly /></div>
+        </div>
+
+        <div class="grid-2" style="margin-top:8px;">
+          <div><label for="fiber">Kuitu/kimmoisuus</label>
+            <select id="fiber">
+              <option value="wool-nylon" selected>Villa + nylon</option>
+              <option value="superwash">Superwash-villa</option>
+              <option value="wool">100% villa</option>
+              <option value="cotton">Puuvilla</option>
+              <option value="bamboo">Bambu/viskoosi</option>
+              <option value="acrylic">Akryyli/sekoite</option>
+            </select>
+          </div>
+          <div><label for="tightness">Neulontakireys</label>
+            <select id="tightness">
+              <option value="tight">Tiukka</option><option value="medium" selected>Keskitaso</option><option value="loose">Väljä</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:8px; gap:10px; align-items:center;">
+          <input id="sockMode" type="checkbox" checked aria-label="Sukkakäyttö" />
+          <label for="sockMode" style="margin:0;">Sukkakäyttö (tiukempi suositus)</label>
+        </div>
+
+        <div class="grid-2" style="margin-top:8px;">
+          <div><label for="startNeedle">Aloituspuikko (suositus)</label><input id="startNeedle" type="text" placeholder="—" readonly /></div>
+          <div><label for="startNeedleNote">Huomio</label><input id="startNeedleNote" type="text" placeholder="Tavoite-tiheys mallitilkulla" readonly /></div>
+        </div>
+
+        <div class="row" style="margin-top:8px; gap:8px;">
+          <button id="saveStartNeedleBtn" class="secondary">Tallenna aloituspuikko tälle parille</button>
+        </div>
+
+        <div class="grid-2" style="margin-top:8px;">
+          <div><label for="savedStartNeedle">Tallennettu aloituspuikko</label><input id="savedStartNeedle" type="text" placeholder="—" readonly /></div>
+          <div><label for="savedStartNeedleNote">Muistilappu</label><input id="savedStartNeedleNote" type="text" placeholder="—" readonly /></div>
+        </div>
+
+        <div style="height:8px;"></div>
+
+        <div class="grid">
+          <div><label for="sts10">Silmukkatiheys s / 10 cm</label><input id="sts10" type="number" min="1" step="0.1" value="28" /></div>
+          <div><label for="rows10">Kerrostiheys krs / 10 cm</label><input id="rows10" type="number" min="1" step="0.1" value="38" /></div>
+          <div><label for="unitSel">Yksikkö</label><select id="unitSel"><option value="metric">Metri (10 cm)</option><option value="imperial">Imperial (4 in)</option></select></div>
+          <div><label for="stsIn">Silmukkatiheys per inch</label><input id="stsIn" type="number" step="0.01" readonly /></div>
+          <div><label for="rowsIn">Kerrostiheys per inch</label><input id="rowsIn" type="number" step="0.01" readonly /></div>
+          <div><label for="circumference">Jalan ympärys (cm)</label><input id="circumference" type="number" min="10" step="0.1" value="22" /></div>
+        </div>
+
+        <div style="height:8px;"></div>
+        <div class="grid-2">
+          <div><label for="roundTo">Pyöristys jaolliseksi</label><select id="roundTo"><option value="2">2</option><option value="4" selected>4</option><option value="8">8</option><option value="12">12</option><option value="16">16</option></select></div>
+          <div><label for="negativeEase">Miinusväljyyden %</label><input id="negativeEase" type="number" min="0" max="20" step="1" value="8" /></div>
+        </div>
+
+        <div style="height:8px;"></div>
+        <div class="toolbar">
+          <button id="calcGaugeBtn" class="secondary">Laske ehdotettu N</button>
+          <button id="applyGaugeBtn">Sovella aktiiviseen pariin</button>
+        </div>
+
+        <div style="height:8px;"></div>
+        <div class="grid-2">
+          <div><strong>Ehdotettu N</strong><div id="suggestN" class="result">-</div></div>
+          <div><strong>Ehdotettu T</strong><div id="suggestT" class="result">-</div></div>
+        </div>
+      </section>
+
+      <section class="card print-section" aria-label="Kerrosvaiheet">
+        <div class="row" style="justify-content:space-between;">
+          <h2 style="margin:0; font-size:1rem;">Kerrosvaiheet (lyhytkerros-kantapää, kaksoissilmukat)</h2>
+          <div class="toolbar"><button id="copyStepsBtn" class="secondary">Kopioi</button></div>
+        </div>
+        <p class="muted">Jos T on pariton, jako tehdään ⌊T/2⌋ ja ⌈T/2⌉.</p>
+        <div id="steps" class="steps">-</div>
+      </section>
+
+      <section class="card print-section" aria-label="Testitilkkujen loki">
+        <div class="row" style="justify-content:space-between;">
+          <h2 style="margin:0; font-size:1rem;">Testitilkkujen loki (parikohtainen)</h2>
+          <div class="toolbar">
+            <button id="swatchNewBtn" class="secondary">Uusi merkintä</button>
+            <button id="swatchSaveBtn">Tallenna merkintä</button>
+            <button id="swatchCancelBtn" class="secondary">Peru</button>
+          </div>
+        </div>
+
+        <div class="grid">
+          <div><label for="swatchDate">Päiväys</label><input id="swatchDate" type="date" /></div>
+          <div><label for="swatchYarn">Lanka</label><input id="swatchYarn" type="text" placeholder="Esim. Fingering 75/25" /></div>
+          <div><label for="swatchNeedleMM">Puikot (mm)</label><input id="swatchNeedleMM" type="number" step="0.25" min="1.0" placeholder="2.25" /></div>
+          <div><label for="swatchNeedleUS">Puikot (US)</label><input id="swatchNeedleUS" type="text" placeholder="US 1" /></div>
+          <div><label for="swatchSts10">Silmukoita / 10 cm</label><input id="swatchSts10" type="number" step="0.1" min="1" placeholder="30.0" /></div>
+          <div><label for="swatchRows10">Kerroksia / 10 cm</label><input id="swatchRows10" type="number" step="0.1" min="1" placeholder="40.0" /></div>
+        </div>
+
+        <div style="margin-top:8px;"><label for="swatchNote">Muistiinpanot</label><input id="swatchNote" type="text" placeholder="Tuntuma, pesu, jne." /></div>
+
+        <div style="height:10px;"></div>
+        <div style="overflow:auto;">
+          <table aria-label="Testitilkut">
+            <thead><tr><th>Päivä</th><th>Lanka</th><th>Puikot</th><th>Tiheys (s/10cm)</th><th>Krs/10cm</th><th>Muistiinpanot</th><th>Toiminnot</th></tr></thead>
+            <tbody id="swatchTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card print-section" aria-label="Yhteenveto">
+        <div class="row" style="justify-content:space-between;"><h2 style="margin:0; font-size:1rem;">Kaikkien parien yhteenveto</h2></div>
+        <div style="height:8px;"></div>
+        <div style="overflow:auto;">
+          <table aria-label="Yhteenvetotaulukko">
+            <thead><tr><th>Nimi</th><th>N</th><th>Lk</th><th>Lt</th><th>T</th><th>Rt</th><th>Rk</th><th>Laskettu</th><th>Status</th></tr></thead>
+            <tbody id="summaryBody"></tbody>
+          </table>
+        </div>
+        <div class="row" style="gap:8px; margin-top:8px;"><span class="badge ok" id="okCount">OK: 0</span><span class="badge err" id="errCount">Virhe: 0</span></div>
+      </section>
+    </main>
+  </div>
+
+  <div class="footer-tip">Vihje: iPhone/Safari → Jaa → Lisää Kotiin. Android/Chrome → ⋮ → Lisää aloitusnäyttöön.</div>
+
+  <script>
+    // PWA install prompt
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+    }
+    let deferredPrompt=null;const banner=document.getElementById('pwaBanner');const installBtn=document.getElementById('pwaInstallBtn');const dismissBtn=document.getElementById('pwaDismissBtn');
+    window.addEventListener('beforeinstallprompt',(e)=>{e.preventDefault();deferredPrompt=e;banner?.classList.add('show');});
+    installBtn?.addEventListener('click',async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;banner?.classList.remove('show');});
+    dismissBtn?.addEventListener('click',()=>banner?.classList.remove('show'));
+
+    // App state
+    const storageKey="kantapaa_multi_pairs_all_v1", swatchKey="kantapaa_swatch_logs_v1", MAX_PAIRS=10;
+    let pairs=[], activeId=null, swatchesByPair={}, activeSwatchId=null;
+
+    const els={
+      addPairBtn:byId('addPairBtn'),exportBtn:byId('exportBtn'),importBtn:byId('importBtn'),importFile:byId('importFile'),clearAllBtn:byId('clearAllBtn'),printBtn:byId('printBtn'),
+      search:byId('search'),pairList:byId('pairList'),
+      pairName:byId('pairName'),N:byId('N'),Lk:byId('Lk'),Lt:byId('Lt'),T:byId('T'),Rt:byId('Rt'),Rk:byId('Rk'),
+      computedN:byId('computedN'),status:byId('status'),structure:byId('structure'),notices:byId('notices'),
+      duplicateBtn:byId('duplicateBtn'),deleteBtn:byId('deleteBtn'),
+      summaryBody:byId('summaryBody'),okCount:byId('okCount'),errCount:byId('errCount'),
+      steps:byId('steps'),copyStepsBtn:byId('copyStepsBtn'),
+      yarnWeight:byId('yarnWeight'),needleHint:byId('needleHint'),unitSel:byId('unitSel'),sts10:byId('sts10'),rows10:byId('rows10'),stsIn:byId('stsIn'),rowsIn:byId('rowsIn'),
+      circumference:byId('circumference'),roundTo:byId('roundTo'),negativeEase:byId('negativeEase'),calcGaugeBtn:byId('calcGaugeBtn'),applyGaugeBtn:byId('applyGaugeBtn'),suggestN:byId('suggestN'),suggestT:byId('suggestT'),
+      fiber:byId('fiber'),tightness:byId('tightness'),sockMode:byId('sockMode'),
+      startNeedle:byId('startNeedle'),startNeedleNote:byId('startNeedleNote'),saveStartNeedleBtn:byId('saveStartNeedleBtn'),savedStartNeedle:byId('savedStartNeedle'),savedStartNeedleNote:byId('savedStartNeedleNote'),
+      swatchNewBtn:byId('swatchNewBtn'),swatchSaveBtn:byId('swatchSaveBtn'),swatchCancelBtn:byId('swatchCancelBtn'),swatchDate:byId('swatchDate'),swatchYarn:byId('swatchYarn'),
+      swatchNeedleMM:byId('swatchNeedleMM'),swatchNeedleUS:byId('swatchNeedleUS'),swatchSts10:byId('swatchSts10'),swatchRows10:byId('swatchRows10'),swatchNote:byId('swatchNote'),swatchTableBody:byId('swatchTableBody'),
+    };
+
+    const weightPresets={lace:{sts10:36,mmMin:1.75,mmMax:2.75,sockMin:1.75,sockMax:2.25},fingering:{sts10:30,mmMin:2.00,mmMax:3.25,sockMin:2.00,sockMax:2.50},sport:{sts10:25,mmMin:2.75,mmMax:3.75,sockMin:2.50,sockMax:3.00},dk:{sts10:22,mmMin:3.50,mmMax:4.50,sockMin:3.00,sockMax:3.50},worsted:{sts10:19,mmMin:4.00,mmMax:5.50,sockMin:3.50,sockMax:4.00},aran:{sts10:17,mmMin:4.50,mmMax:6.00,sockMin:4.00,sockMax:4.50},bulky:{sts10:13,mmMin:5.50,mmMax:8.00,sockMin:4.50,sockMax:6.00}};
+    const needleSizesMM=[1.5,1.75,2.0,2.25,2.5,2.75,3.0,3.25,3.5,3.75,4.0,4.5,5.0,5.5,6.0,6.5,7.0,8.0];
+
+    function byId(id){return document.getElementById(id)}
+    function uuid(){if(crypto?.randomUUID)return crypto.randomUUID();return'xxxxxxxyxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;const v=c==='x'?r:(r&0x3|0x8);return v.toString(16)})}
+    function clampInt(v){v=Number(v);if(!Number.isFinite(v)||v<0)return 0;return Math.round(v)}
+    function clampNum(v){v=Number(v);if(!Number.isFinite(v)||v<0)return 0;return v}
+    function roundToMultiple(n,m){m=Math.max(1,Number(m)||1);return Math.round(n/m)*m}
+    function nearestNeedleMM(mm){let best=needleSizesMM[0];for(const s of needleSizesMM){if(Math.abs(s-mm)<Math.abs(best-mm))best=s}return best}
+    function mmToUS(mm){const map=[{mm:2.0,us:'US 0'},{mm:2.25,us:'US 1'},{mm:2.5,us:'US 1.5'},{mm:2.75,us:'US 2'},{mm:3.0,us:'US 2.5'},{mm:3.25,us:'US 3'},{mm:3.5,us:'US 4'},{mm:3.75,us:'US 5'},{mm:4.0,us:'US 6'},{mm:4.5,us:'US 7'},{mm:5.0,us:'US 8'},{mm:5.5,us:'US 9'},{mm:6.0,us:'US 10'},{mm:6.5,us:'US 10.5'},{mm:8.0,us:'US 11–13'}];let closest=map[0];for(const r of map){if(Math.abs(r.mm-mm)<Math.abs(closest.mm-mm))closest=r}return closest.us}
+
+    function createDefaultPair(name){return{id:uuid(),name:name||`Pari ${pairs.length+1}`,N:48,Lk:8,Lt:0,T:16,Rt:0,Rk:8,startNeedleMM:null,startNeedleUS:'',startNeedleNote:''}}
+    function computePair(p){const computed=2*clampInt(p.Lk)+2*clampInt(p.Rk)+clampInt(p.T)+clampInt(p.Lt)+clampInt(p.Rt);const status=(computed===clampInt(p.N))?'OK':'ERÄ';return{computed,status}}
+    function save(){localStorage.setItem(storageKey,JSON.stringify({pairs,activeId}))}
+    function load(){const raw=localStorage.getItem(storageKey);if(!raw)return;try{const obj=JSON.parse(raw);if(Array.isArray(obj.pairs))pairs=obj.pairs;if(obj.activeId)activeId=obj.activeId}catch{}}
+    function loadSwatches(){try{const raw=localStorage.getItem(swatchKey);swatchesByPair=raw?JSON.parse(raw):{}}catch{swatchesByPair={}}}
+    function saveSwatches(){localStorage.setItem(swatchKey,JSON.stringify(swatchesByPair))}
+    function getSwatches(pairId){if(!swatchesByPair[pairId])swatchesByPair[pairId]=[];return swatchesByPair[pairId]}
+
+    function addPair(name){if(pairs.length>=MAX_PAIRS){alert(`Maksimi ${MAX_PAIRS} paria saavutettu.`);return}const p=createDefaultPair(name);pairs.push(p);activeId=p.id;renderAll();save()}
+    function deletePairFn(id){const idx=pairs.findIndex(x=>x.id===id);if(idx===-1)return;if(!confirm('Poistetaanko tämä pari pysyvästi?'))return;pairs.splice(idx,1);activeId=pairs[0]?.id||null;renderAll();save()}
+    function duplicatePair(id){const orig=pairs.find(p=>p.id===id);if(!orig)return;if(pairs.length>=MAX_PAIRS){alert(`Maksimi ${MAX_PAIRS} paria saavutettu.`);return}const clone={...orig,id:uuid(),name:(orig.name||'Pari')+' (kopio)'};pairs.push(clone);activeId=clone.id;renderAll();save()}
+    function setActive(id){activeId=id;renderAll();save()}
+    function updateActiveField(field,value){const p=pairs.find(x=>x.id===activeId);if(!p)return;if(field==='name')p.name=String(value).slice(0,80);else p[field]=clampInt(value);renderAll();save()}
+
+    function filterPairsByName(q){q=(q||'').
